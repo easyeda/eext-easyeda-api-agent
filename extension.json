@@ -1,0 +1,82 @@
+{
+	"name": "easyeda-api-agent",
+	"uuid": "d6bdad7f18414e5383464fd2e41d49c2",
+	"displayName": "EDA Agent",
+	"description": "嘉立创EDA专业版 Agent 工具",
+	"version": "1.4.1",
+	"publisher": "JLCEDA <support[#]lceda.cn>",
+	"engines": {
+		"eda": "^2.3.0"
+	},
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "extension-store",
+		"url": ""
+	},
+	"categories": "Other",
+	"keywords": ["SDK", "AI", "API Agent"],
+	"images": {
+		"logo": "./images/logo.png"
+	},
+	"homepage": "https://pro.lceda.cn",
+	"bugs": "https://lceda.cn/page/feedback?originPage=other",
+	"activationEvents": {},
+	"entry": "./dist/index",
+	"dependentExtensions": {},
+	"headerMenus": {
+		"home": [
+			{
+				"id": "Agent",
+				"title": "Agent",
+				"menuItems": [
+					{
+						"id": "ApiAgent",
+						"title": "API Agent",
+						"registerFn": "openApiAgent"
+					},
+					{
+						"id": "About",
+						"title": "About...",
+						"registerFn": "about"
+					}
+				]
+			}
+		],
+		"sch": [
+			{
+				"id": "Agent",
+				"title": "Agent",
+				"menuItems": [
+					{
+						"id": "ApiAgent",
+						"title": "API Agent",
+						"registerFn": "openApiAgent"
+					},
+					{
+						"id": "About",
+						"title": "About...",
+						"registerFn": "about"
+					}
+				]
+			}
+		],
+		"pcb": [
+			{
+				"id": "Agent",
+				"title": "Agent",
+				"menuItems": [
+					{
+						"id": "ApiAgent",
+						"title": "API Agent",
+						"registerFn": "openApiAgent"
+					},
+					{
+						"id": "About",
+						"title": "About...",
+						"registerFn": "about"
+					}
+				]
+			}
+		]
+	}
+}

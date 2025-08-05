@@ -1,0 +1,1579 @@
+<!doctype html>
+<html lang="zh-Hans">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Agent</title>
+		<!-- 引入marked.js用于Markdown解析 -->
+		<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+		<!-- 引入highlight.js用于代码高亮 -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css" />
+		<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+		<!-- 引入适配器文件 -->
+		<script src="/iframe/adapters/base-adapter.js"></script>
+		<script src="/iframe/adapters/system-adapter.js"></script>
+		<script src="/iframe/adapters/document-adapter.js"></script>
+		<script src="/iframe/adapters/schematic-adapter.js"></script>
+		<script src="/iframe/adapters/pcb-adapter.js"></script>
+		<script src="/iframe/adapters/panel-adapter.js"></script>
+		<script src="/iframe/adapters/library-adapter.js"></script>
+		<script src="/iframe/adapters/index.js"></script>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family:
+					'Microsoft YaHei',
+					-apple-system,
+					BlinkMacSystemFont,
+					'Segoe UI',
+					Roboto,
+					sans-serif;
+				background: linear-gradient(135deg, #f5f7fa 0%, #e8eef7 100%);
+				height: 100vh;
+				display: flex;
+				flex-direction: column;
+			}
+
+			.header {
+				background: rgba(255, 255, 255, 0.95);
+				backdrop-filter: blur(10px);
+				border-bottom: 1px solid rgba(85, 136, 254, 0.2);
+				padding: 12px 20px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				box-shadow: 0 2px 10px rgba(85, 136, 254, 0.1);
+			}
+
+			.header h1 {
+				font-size: 18px;
+				color: #333;
+				font-weight: 600;
+			}
+
+			.settings-btn {
+				background: #5588fe;
+				color: white;
+				border: none;
+				padding: 8px 16px;
+				border-radius: 4px;
+				font-size: 12px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				display: flex;
+				align-items: center;
+				gap: 6px;
+			}
+
+			.settings-btn:hover {
+				background: #4477ed;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 15px rgba(85, 136, 254, 0.3);
+			}
+
+			.main-container {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				padding: 20px;
+				gap: 20px;
+				min-height: 0;
+			}
+
+			.chat-container {
+				flex: 1;
+				background: rgba(255, 255, 255, 0.95);
+				border-radius: 6px;
+				padding: 20px;
+				box-shadow: 0 4px 20px rgba(85, 136, 254, 0.1);
+				display: flex;
+				flex-direction: column;
+				gap: 15px;
+				overflow-y: auto;
+				max-height: calc(100vh - 280px);
+				min-height: 300px;
+			}
+
+			.message {
+				max-width: 80%;
+				padding: 12px 16px;
+				border-radius: 6px;
+				word-wrap: break-word;
+				animation: fadeIn 0.3s ease;
+			}
+
+			.message.user {
+				background: #5588fe;
+				color: white;
+				align-self: flex-end;
+				margin-left: auto;
+			}
+
+			.message.assistant {
+				background: #f8f9fa;
+				color: #333;
+				align-self: flex-start;
+				border: 1px solid #e9ecef;
+			}
+
+			.message.system {
+				background: #e8f4fd;
+				color: #0066cc;
+				align-self: center;
+				font-size: 12px;
+				border: 1px solid #b3d9ff;
+			}
+
+			.message.tool-call {
+				background: #fff3cd;
+				color: #856404;
+				border: 1px solid #ffeaa7;
+				align-self: flex-start;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				position: relative;
+			}
+
+			.message.tool-call:hover {
+				background: #fff8e1;
+				transform: translateY(-1px);
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			}
+
+			.tool-call-header {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				font-weight: 600;
+				margin-bottom: 4px;
+			}
+
+			.tool-call-summary {
+				font-size: 12px;
+				opacity: 0.8;
+			}
+
+			.tool-call-details {
+				margin-top: 10px;
+				padding-top: 10px;
+				border-top: 1px solid #e6cc80;
+				font-size: 12px;
+				font-family: 'Consolas', 'Monaco', monospace;
+				background: #f8f5e4;
+				border-radius: 4px;
+				padding: 8px;
+				display: none;
+			}
+
+			.tool-call-details.expanded {
+				display: block;
+			}
+
+			.tool-call-details pre {
+				margin: 0;
+				white-space: pre-wrap;
+				word-wrap: break-word;
+			}
+
+			.input-area {
+				background: rgba(255, 255, 255, 0.95);
+				border-radius: 6px;
+				padding: 15px;
+				box-shadow: 0 4px 20px rgba(85, 136, 254, 0.1);
+				flex-shrink: 0;
+			}
+
+			.api-buttons {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 10px;
+				margin-bottom: 15px;
+			}
+
+			.api-btn {
+				background: #5588fe;
+				color: white;
+				border: none;
+				padding: 10px 15px;
+				border-radius: 4px;
+				font-size: 12px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 6px;
+			}
+
+			.api-btn:hover {
+				background: #4477ed;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 15px rgba(85, 136, 254, 0.3);
+			}
+
+			.input-group {
+				display: flex;
+				gap: 12px;
+				align-items: flex-end;
+			}
+
+			.message-input {
+				flex: 1;
+				border: 2px solid #e0e0e0;
+				border-radius: 4px;
+				padding: 12px 16px;
+				font-size: 14px;
+				resize: vertical;
+				outline: none;
+				transition: border-color 0.3s ease;
+				min-height: 60px;
+				max-height: 120px;
+				line-height: 1.4;
+				font-family: inherit;
+			}
+
+			.message-input:focus {
+				border-color: #5588fe;
+			}
+
+			.send-btn {
+				background: #5588fe;
+				color: white;
+				border: none;
+				padding: 12px 20px;
+				border-radius: 6px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				min-width: 80px;
+				justify-content: center;
+				font-weight: 500;
+			}
+
+			.send-btn:hover {
+				background: #4477ed;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 15px rgba(85, 136, 254, 0.3);
+			}
+
+			.send-btn:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+				transform: none;
+			}
+
+			/* 新增：终止按钮样式 */
+			.send-btn.abort {
+				background: #8fa8ff;
+				color: white;
+			}
+
+			.send-btn.abort:hover {
+				background: #7a96ff;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 15px rgba(85, 136, 254, 0.2);
+			}
+
+			.voice-btn {
+				background: #5588fe;
+				color: white;
+				border: none;
+				padding: 12px 16px;
+				border-radius: 6px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				font-size: 14px;
+				min-width: 80px;
+				justify-content: center;
+				font-weight: 500;
+			}
+
+			.voice-btn:hover {
+				background: #4477ed;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 15px rgba(85, 136, 254, 0.3);
+			}
+
+			.voice-btn.recording {
+				background: #dc3545;
+				animation: pulse 1.5s infinite;
+			}
+
+			.voice-btn.recording:hover {
+				background: #c82333;
+			}
+
+			.voice-btn:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+				transform: none;
+			}
+
+			@keyframes pulse {
+				0% {
+					box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+				}
+				70% {
+					box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+				}
+				100% {
+					box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+				}
+			}
+
+			.settings-panel {
+				position: fixed;
+				top: 0;
+				right: -400px;
+				width: 400px;
+				height: 100vh;
+				background: rgba(255, 255, 255, 0.98);
+				backdrop-filter: blur(10px);
+				box-shadow: -4px 0 20px rgba(85, 136, 254, 0.1);
+				transition: right 0.3s ease;
+				z-index: 1000;
+				padding: 20px;
+				overflow-y: auto;
+			}
+
+			.settings-panel.open {
+				right: 0;
+			}
+
+			.settings-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 2px solid #f0f0f0;
+			}
+
+			.settings-header h2 {
+				font-size: 18px;
+				color: #333;
+			}
+
+			.close-btn {
+				background: none;
+				border: none;
+				font-size: 24px;
+				cursor: pointer;
+				color: #666;
+				padding: 5px;
+				border-radius: 4px;
+				transition: all 0.3s ease;
+			}
+
+			.close-btn:hover {
+				background: #f0f0f0;
+				color: #333;
+			}
+
+			.form-group {
+				margin-bottom: 20px;
+			}
+
+			.form-group label {
+				display: block;
+				margin-bottom: 8px;
+				font-weight: 600;
+				color: #333;
+				font-size: 14px;
+			}
+
+			.form-group input,
+			.form-group select {
+				width: 100%;
+				padding: 12px;
+				border: 2px solid #e0e0e0;
+				border-radius: 4px;
+				font-size: 14px;
+				outline: none;
+				transition: border-color 0.3s ease;
+			}
+
+			.form-group input:focus,
+			.form-group select:focus {
+				border-color: #5588fe;
+			}
+
+			.save-btn {
+				width: 100%;
+				background: #5588fe;
+				color: white;
+				border: none;
+				padding: 12px;
+				border-radius: 4px;
+				font-size: 14px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+			}
+
+			.save-btn:hover {
+				background: #4477ed;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 15px rgba(85, 136, 254, 0.3);
+			}
+
+			.log-section {
+				margin-top: 30px;
+				padding-top: 20px;
+				border-top: 2px solid #f0f0f0;
+			}
+
+			.log-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 15px;
+			}
+
+			.log-header h3 {
+				font-size: 16px;
+				color: #333;
+			}
+
+			.clear-log-btn {
+				background: #ff6b6b;
+				color: white;
+				border: none;
+				padding: 6px 12px;
+				border-radius: 4px;
+				font-size: 12px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+			}
+
+			.clear-log-btn:hover {
+				background: #ff5252;
+			}
+
+			.log-container {
+				background: #f8f9fa;
+				border: 1px solid #e0e0e0;
+				border-radius: 4px;
+				padding: 15px;
+				max-height: 200px;
+				overflow-y: auto;
+				font-family: 'Consolas', 'Monaco', monospace;
+				font-size: 12px;
+				line-height: 1.4;
+			}
+
+			.log-entry {
+				margin-bottom: 8px;
+				padding: 4px 0;
+				border-bottom: 1px solid #eee;
+			}
+
+			.log-entry:last-child {
+				border-bottom: none;
+				margin-bottom: 0;
+			}
+
+			.log-time {
+				color: #666;
+				font-size: 11px;
+			}
+
+			.log-content {
+				color: #333;
+				margin-top: 2px;
+			}
+
+			.voice-status {
+				font-size: 12px;
+				color: #666;
+				margin-top: 5px;
+				text-align: center;
+			}
+
+			.voice-status.listening {
+				color: #dc3545;
+				font-weight: 600;
+			}
+
+			@keyframes fadeIn {
+				from {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			.loading {
+				display: inline-block;
+				width: 16px;
+				height: 16px;
+				border: 2px solid #f3f3f3;
+				border-top: 2px solid #5588fe;
+				border-radius: 50%;
+				animation: spin 1s linear infinite;
+			}
+
+			@keyframes spin {
+				0% {
+					transform: rotate(0deg);
+				}
+				100% {
+					transform: rotate(360deg);
+				}
+			}
+
+			/* 新增下拉框和自动补全样式 */
+			.tool-selector {
+				position: relative;
+				margin-bottom: 15px;
+			}
+
+			.tool-dropdown {
+				width: 100%;
+				padding: 12px 15px;
+				border: 2px solid #e0e0e0;
+				border-radius: 6px;
+				font-size: 14px;
+				background: white;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+			}
+
+			.tool-dropdown:hover {
+				border-color: #5588fe;
+				box-shadow: 0 2px 8px rgba(85, 136, 254, 0.15);
+			}
+
+			.tool-dropdown:focus {
+				border-color: #5588fe;
+				outline: none;
+			}
+
+			.autocomplete-container {
+				position: relative;
+				display: flex;
+				flex: 1;
+				width: 100%;
+			}
+
+			.autocomplete-suggestions {
+				position: absolute;
+				top: 100%;
+				left: 0;
+				right: 0;
+				background: white;
+				border: 1px solid #ddd;
+				border-top: none;
+				border-radius: 0 0 4px 4px;
+				max-height: 200px;
+				overflow-y: auto;
+				z-index: 1000;
+				display: none;
+			}
+
+			.autocomplete-suggestion {
+				padding: 10px 15px;
+				cursor: pointer;
+				border-bottom: 1px solid #eee;
+				transition: background-color 0.2s ease;
+			}
+
+			.autocomplete-suggestion:hover,
+			.autocomplete-suggestion.selected {
+				background-color: #f0f8ff;
+			}
+
+			.autocomplete-suggestion:last-child {
+				border-bottom: none;
+			}
+
+			.suggestion-name {
+				font-weight: 600;
+				color: #333;
+			}
+
+			.suggestion-desc {
+				font-size: 12px;
+				color: #666;
+				margin-top: 2px;
+			}
+
+			/* 聊天容器滚动条样式 */
+			.chat-container::-webkit-scrollbar {
+				width: 6px;
+			}
+
+			.chat-container::-webkit-scrollbar-track {
+				background: #f1f1f1;
+				border-radius: 3px;
+			}
+
+			.chat-container::-webkit-scrollbar-thumb {
+				background: #5588fe;
+				border-radius: 3px;
+			}
+
+			.chat-container::-webkit-scrollbar-thumb:hover {
+				background: #4477ed;
+			}
+
+			/* Markdown样式 */
+			.message.assistant h1,
+			.message.assistant h2,
+			.message.assistant h3,
+			.message.assistant h4,
+			.message.assistant h5,
+			.message.assistant h6 {
+				margin: 10px 0 5px 0;
+				color: #333;
+			}
+
+			.message.assistant p {
+				margin: 8px 0;
+				line-height: 1.6;
+			}
+
+			.message.assistant ul,
+			.message.assistant ol {
+				margin: 8px 0;
+				padding-left: 20px;
+			}
+
+			.message.assistant li {
+				margin: 4px 0;
+			}
+
+			.message.assistant code {
+				background: #f1f3f4;
+				padding: 2px 4px;
+				border-radius: 3px;
+				font-family: 'Consolas', 'Monaco', monospace;
+				font-size: 0.9em;
+			}
+
+			.message.assistant pre {
+				background: #f8f9fa;
+				border: 1px solid #e9ecef;
+				border-radius: 4px;
+				padding: 12px;
+				margin: 8px 0;
+				overflow-x: auto;
+			}
+
+			.message.assistant pre code {
+				background: none;
+				padding: 0;
+			}
+
+			.message.assistant blockquote {
+				border-left: 4px solid #5588fe;
+				margin: 8px 0;
+				padding-left: 12px;
+				color: #666;
+				font-style: italic;
+			}
+
+			.message.assistant table {
+				border-collapse: collapse;
+				width: 100%;
+				margin: 8px 0;
+			}
+
+			.message.assistant th,
+			.message.assistant td {
+				border: 1px solid #ddd;
+				padding: 8px;
+				text-align: left;
+			}
+
+			.message.assistant th {
+				background-color: #f2f2f2;
+				font-weight: bold;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<h1>嘉立创EDA Agent</h1>
+			<button class="settings-btn" onclick="toggleSettings()">⚙️ 设置</button>
+		</div>
+
+		<div class="main-container">
+			<div class="chat-container" id="chatContainer">
+				<div class="message system">欢迎使用扩展API Agent！您可以通过自然语言或语音调用EDA扩展API功能。</div>
+			</div>
+
+			<div class="input-area">
+				<div class="tool-selector">
+					<select class="tool-dropdown" id="toolDropdown" onchange="insertToolFunction()">
+						<option value="">选择快捷工具函数...</option>
+						<option value="getDocumentInfo()">获取文档信息 - getDocumentInfo()</option>
+						<option value="getEditorInfo()">获取编辑器信息 - getEditorInfo()</option>
+						<option value="getEnvironmentInfo()">获取环境信息 - getEnvironmentInfo()</option>
+					</select>
+				</div>
+
+				<div class="input-group">
+					<div class="autocomplete-container">
+						<textarea
+							class="message-input"
+							id="messageInput"
+							placeholder="请输入您的需求，例如：获取当前选中的元件信息，或直接输入工具函数名"
+							onkeydown="handleKeyDown(event)"
+							oninput="handleAutoComplete(event)"
+							onfocus="showAutoComplete()"
+							onblur="hideAutoComplete()"
+						></textarea>
+						<div class="autocomplete-suggestions" id="autocompleteSuggestions"></div>
+					</div>
+					<button class="send-btn" id="sendBtn">发送</button>
+					<button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecognition()">语音</button>
+				</div>
+				<div class="voice-status" id="voiceStatus"></div>
+			</div>
+		</div>
+
+		<!-- 设置面板 -->
+		<div class="settings-panel" id="settingsPanel">
+			<div class="settings-header">
+				<h2>⚙️ 设置</h2>
+				<button class="close-btn" onclick="toggleSettings()">&times;</button>
+			</div>
+
+			<div class="form-group">
+				<label for="apiUrl">API地址</label>
+				<input type="text" id="apiUrl" value="https://api.deepseek.com/chat/completions" placeholder="请输入API地址" />
+			</div>
+
+			<div class="form-group">
+				<label for="apiKey">API密钥</label>
+				<input type="password" id="apiKey" placeholder="请输入DeepSeek API Key" />
+			</div>
+
+			<div class="form-group">
+				<label for="model">模型</label>
+				<select id="model">
+					<option value="deepseek-chat">deepseek-chat</option>
+					<option value="deepseek-coder">deepseek-coder</option>
+				</select>
+			</div>
+
+			<div class="form-group">
+				<label for="temperature">温度 (0-1)</label>
+				<input type="number" id="temperature" min="0" max="1" step="0.1" value="0.7" />
+			</div>
+
+			<div class="form-group">
+				<label for="voiceLanguage">语音识别语言</label>
+				<select id="voiceLanguage">
+					<option value="zh-CN">中文（简体）</option>
+					<option value="zh-TW">中文（繁体）</option>
+					<option value="en-US">English (US)</option>
+					<option value="ja-JP">日本語</option>
+				</select>
+			</div>
+
+			<button class="save-btn" onclick="saveSettings()">💾 保存设置</button>
+
+			<!-- API日志部分 -->
+			<div class="log-section">
+				<div class="log-header">
+					<h3>📊 API调用日志</h3>
+					<button class="clear-log-btn" onclick="clearLogs()">🗑️ 清空</button>
+				</div>
+				<div class="log-container" id="logContainer">
+					<div class="log-entry">
+						<div class="log-time">等待API调用...</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			// 全局变量
+			let isLoading = false;
+			let isAborted = false;
+			let currentAbortController = null;
+			let apiLogs = [];
+			let conversationHistory = [];
+			let recognition = null;
+			let isRecording = false;
+
+			// 配置对象
+			const config = {
+				apiUrl: 'https://api.deepseek.com/v1/chat/completions',
+				apiKey: '',
+				model: 'deepseek-chat',
+				temperature: 0.7,
+				voiceLanguage: 'zh-CN',
+			};
+
+			// 配置marked.js
+			if (typeof marked !== 'undefined') {
+				marked.setOptions({
+					highlight: function (code, lang) {
+						if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+							try {
+								return hljs.highlight(code, { language: lang }).value;
+							} catch (err) {}
+						}
+						return code;
+					},
+					breaks: true,
+					gfm: true,
+				});
+			}
+
+			// MCP适配层 - 轻量级实现
+			class MCPAdapter {
+				constructor() {
+					// 使用适配器管理器中的工具
+					this.tools = {};
+
+					// 从适配器管理器获取所有工具
+					const availableTools = window.adapterManager.getAvailableTools();
+
+					// 注册所有工具
+					availableTools.forEach((tool) => {
+						this.tools[tool.name] = {
+							description: tool.description,
+							execute: (params) => window.adapterManager.executeTool(tool.name, params),
+						};
+					});
+				}
+
+				async executeTool(name, params = {}) {
+					if (this.tools[name]) {
+						return await this.tools[name].execute(params);
+					} else {
+						return {
+							success: false,
+							error: `未知工具: ${name}`,
+							message: '工具不存在',
+						};
+					}
+				}
+
+				getAvailableTools() {
+					return Object.keys(this.tools).map((name) => ({
+						name: name,
+						description: this.tools[name].description,
+					}));
+				}
+
+				async executeTool(name, params = {}) {
+					if (this.tools[name]) {
+						return await this.tools[name].execute(params);
+					} else {
+						return {
+							success: false,
+							error: `未知工具: ${name}`,
+							message: '工具不存在',
+						};
+					}
+				}
+
+				getAvailableTools() {
+					return Object.keys(this.tools).map((name) => ({
+						name: name,
+						description: this.tools[name].description,
+					}));
+				}
+			}
+
+			// 初始化MCP适配器
+			const mcpAdapter = new MCPAdapter();
+
+			// 页面加载完成后初始化
+			document.addEventListener('DOMContentLoaded', function () {
+				loadSettings();
+				initVoiceRecognition();
+				addSystemMessage('系统已就绪，可以开始对话或使用语音输入');
+
+				// 初始化发送按钮事件
+				const sendBtn = document.getElementById('sendBtn');
+				sendBtn.onclick = sendMessage;
+			});
+
+			// 初始化语音识别
+			function initVoiceRecognition() {
+				if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+					const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+					recognition = new SpeechRecognition();
+
+					recognition.continuous = false;
+					recognition.interimResults = true;
+					recognition.lang = config.voiceLanguage;
+
+					recognition.onstart = function () {
+						isRecording = true;
+						updateVoiceButton();
+						updateVoiceStatus('正在监听...');
+					};
+
+					recognition.onresult = function (event) {
+						let transcript = '';
+						for (let i = event.resultIndex; i < event.results.length; i++) {
+							transcript += event.results[i][0].transcript;
+						}
+
+						document.getElementById('messageInput').value = transcript;
+
+						if (event.results[event.results.length - 1].isFinal) {
+							updateVoiceStatus('识别完成');
+						} else {
+							updateVoiceStatus('正在识别: ' + transcript);
+						}
+					};
+
+					recognition.onend = function () {
+						isRecording = false;
+						updateVoiceButton();
+						updateVoiceStatus('');
+					};
+
+					recognition.onerror = function (event) {
+						isRecording = false;
+						updateVoiceButton();
+						updateVoiceStatus('语音识别错误: ' + event.error);
+					};
+				} else {
+					console.warn('浏览器不支持语音识别');
+					document.getElementById('voiceBtn').disabled = true;
+					updateVoiceStatus('浏览器不支持语音识别功能');
+				}
+			}
+
+			// 切换语音识别
+			function toggleVoiceRecognition() {
+				if (!recognition) {
+					addSystemMessage('语音识别功能不可用');
+					return;
+				}
+
+				if (isRecording) {
+					recognition.stop();
+				} else {
+					recognition.lang = config.voiceLanguage;
+					recognition.start();
+				}
+			}
+
+			// 更新语音按钮状态
+			function updateVoiceButton() {
+				const voiceBtn = document.getElementById('voiceBtn');
+				if (isRecording) {
+					voiceBtn.innerHTML = '🛑 停止';
+					voiceBtn.classList.add('recording');
+				} else {
+					voiceBtn.innerHTML = ' 语音 ';
+					voiceBtn.classList.remove('recording');
+				}
+			}
+
+			// 更新语音状态显示
+			function updateVoiceStatus(status) {
+				const statusElement = document.getElementById('voiceStatus');
+				statusElement.textContent = status;
+				statusElement.className = 'voice-status' + (status.includes('监听') ? ' listening' : '');
+			}
+
+			// 切换设置面板
+			function toggleSettings() {
+				const panel = document.getElementById('settingsPanel');
+				panel.classList.toggle('open');
+			}
+
+			// 保存设置
+			function saveSettings() {
+				config.apiUrl = document.getElementById('apiUrl').value;
+				config.apiKey = document.getElementById('apiKey').value;
+				config.model = document.getElementById('model').value;
+				config.temperature = parseFloat(document.getElementById('temperature').value);
+				config.voiceLanguage = document.getElementById('voiceLanguage').value;
+
+				localStorage.setItem('apiAgentConfig', JSON.stringify(config));
+
+				// 更新语音识别语言
+				if (recognition) {
+					recognition.lang = config.voiceLanguage;
+				}
+
+				addSystemMessage('设置已保存');
+				toggleSettings();
+			}
+
+			// 加载设置
+			function loadSettings() {
+				const saved = localStorage.getItem('apiAgentConfig');
+				if (saved) {
+					const savedConfig = JSON.parse(saved);
+					Object.assign(config, savedConfig);
+
+					document.getElementById('apiUrl').value = config.apiUrl;
+					document.getElementById('apiKey').value = config.apiKey;
+					document.getElementById('model').value = config.model;
+					document.getElementById('temperature').value = config.temperature;
+					document.getElementById('voiceLanguage').value = config.voiceLanguage || 'zh-CN';
+				}
+			}
+
+			// 快速调用API
+			async function quickCall(toolName) {
+				addUserMessage(`调用 ${toolName}`);
+
+				try {
+					const result = await mcpAdapter.executeTool(toolName);
+					addToolCallMessage(toolName, {}, result);
+					logApiCall(toolName, {}, result);
+				} catch (error) {
+					addAssistantMessage(`调用失败: ${error.message}`);
+					logApiCall(toolName, {}, { success: false, error: error.message });
+				}
+			}
+
+			// 发送消息
+			async function sendMessage() {
+				const input = document.getElementById('messageInput');
+				const message = input.value.trim();
+
+				if (!message || isLoading) return;
+
+				if (!config.apiKey) {
+					addSystemMessage('请先在设置中配置API密钥');
+					return;
+				}
+
+				input.value = '';
+				addUserMessage(message);
+				isAborted = false;
+				currentAbortController = new AbortController();
+				setLoading(true);
+
+				try {
+					const response = await callDeepSeekAPI(message);
+
+					// 检查是否被终止
+					if (isAborted) {
+						return;
+					}
+
+					// 确保response不为undefined
+					if (!response) {
+						throw new Error('API返回了空响应');
+					}
+
+					// 检查是否包含工具调用（支持多个工具调用）
+					const toolCalls = [];
+					try {
+						let searchIndex = 0;
+						while (true) {
+							const toolCallIndex = response.indexOf('TOOL_CALL:', searchIndex);
+							if (toolCallIndex === -1) break;
+
+							// 从标记后开始查找JSON
+							const jsonStart = response.indexOf('{', toolCallIndex);
+							if (jsonStart !== -1) {
+								// 使用栈方法匹配完整的JSON
+								let stack = 1;
+								let jsonEnd = jsonStart + 1;
+
+								while (stack > 0 && jsonEnd < response.length) {
+									if (response[jsonEnd] === '{') stack++;
+									else if (response[jsonEnd] === '}') stack--;
+									jsonEnd++;
+								}
+
+								if (stack === 0) {
+									const jsonStr = response.substring(jsonStart, jsonEnd);
+									const toolCall = JSON.parse(jsonStr);
+									toolCalls.push(toolCall);
+									searchIndex = jsonEnd;
+								} else {
+									break;
+								}
+							} else {
+								break;
+							}
+						}
+					} catch (e) {
+						console.error('解析工具调用失败:', e);
+						addSystemMessage(`解析工具调用失败: ${e.message}`);
+					}
+
+					if (toolCalls.length > 0) {
+						// 执行所有工具调用
+						const toolResults = [];
+
+						for (const toolCall of toolCalls) {
+							if (toolCall && toolCall.name) {
+								addToolCallMessage(toolCall.name, toolCall.params || {}, { pending: true });
+
+								try {
+									// 检查是否被终止
+									if (isAborted) {
+										return;
+									}
+
+									const toolResult = await mcpAdapter.executeTool(toolCall.name, toolCall.params);
+									toolResults.push({ toolCall, toolResult });
+
+									// 更新工具调用结果
+									const toolMessages = document.querySelectorAll('.message.tool-call');
+									const lastToolMessage = toolMessages[toolMessages.length - 1];
+									if (lastToolMessage) {
+										lastToolMessage.querySelector('.tool-call-summary').textContent = toolResult.success
+											? '✅ 调用成功 - 点击查看详情'
+											: '❌ 调用失败 - 点击查看详情';
+
+										const details = lastToolMessage.querySelector('.tool-call-details');
+										details.innerHTML = `
+                                        <strong>参数:</strong>
+                                        <pre>${JSON.stringify(toolCall.params || {}, null, 2)}</pre>
+                                        <strong>返回结果:</strong>
+                                        <pre>${JSON.stringify(toolResult, null, 2)}</pre>
+                                    `;
+									}
+
+									logApiCall(toolCall.name, toolCall.params, toolResult);
+								} catch (error) {
+									const errorResult = { success: false, error: error.message };
+									toolResults.push({ toolCall, toolResult: errorResult });
+									addSystemMessage(`工具调用失败: ${error.message}`);
+									logApiCall(toolCall.name, toolCall.params, errorResult);
+								}
+							}
+						}
+
+						// 基于所有工具调用结果生成最终回复
+						if (toolResults.length > 0) {
+							const resultsText = toolResults
+								.map(({ toolCall, toolResult }) => `工具 ${toolCall.name}: ${JSON.stringify(toolResult)}`)
+								.join('\n');
+
+							// 检查是否被终止
+							if (isAborted) {
+								return;
+							}
+
+							const finalResponse = await callDeepSeekAPI(`基于工具调用结果，请用自然语言回复用户。工具调用结果:\n${resultsText}`);
+
+							// 再次检查是否被终止
+							if (isAborted) {
+								return;
+							}
+
+							addAssistantMessage(finalResponse);
+						}
+					} else {
+						// 直接显示AI回复
+						addAssistantMessage(response);
+					}
+
+					// 保存对话历史
+					conversationHistory.push({ role: 'user', content: message }, { role: 'assistant', content: response });
+
+					// 限制历史记录长度
+					if (conversationHistory.length > 20) {
+						conversationHistory = conversationHistory.slice(-20);
+					}
+				} catch (error) {
+					if (error.name === 'AbortError' || isAborted) {
+						// 请求被终止，不显示错误信息
+						return;
+					} else {
+						addSystemMessage(`API调用失败: ${error.message}`);
+					}
+				} finally {
+					currentAbortController = null;
+					setLoading(false);
+				}
+			}
+
+			// 调用DeepSeek API
+			async function callDeepSeekAPI(message) {
+				const systemPrompt = `你是嘉立创EDA专业版的AI助手，专门帮助用户使用EDA扩展API。
+
+可用工具:
+${mcpAdapter
+	.getAvailableTools()
+	.map((tool) => `- ${tool.name}: ${tool.description}`)
+	.join('\n')}
+
+当用户需要调用工具时，请使用以下格式:
+TOOL_CALL: {"name": "工具名称", "params": {参数对象}}
+
+如果需要同时调用多个工具，可以使用多个TOOL_CALL标记，例如:
+TOOL_CALL: {"name": "工具1", "params": {参数对象1}}
+这里是一些文本...
+TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
+
+重要规则:
+1. 只有在用户明确需要调用EDA功能时才使用工具
+2. 不要编造或假设工具调用的结果
+3. 如果不确定用户意图，请先询问澄清
+4. 回答要简洁明了，避免冗长的解释
+5. 支持Markdown格式回复`;
+
+				const messages = [{ role: 'system', content: systemPrompt }, ...conversationHistory.slice(-10), { role: 'user', content: message }];
+
+				const requestBody = {
+					model: config.model,
+					messages: messages,
+					temperature: config.temperature,
+					max_tokens: 1000,
+				};
+
+				logApiCall('deepseek_api', requestBody, null);
+
+				try {
+					// 检查是否被终止
+					if (isAborted) {
+						throw new Error('请求已被终止');
+					}
+
+					// 使用fetch()以支持AbortController
+					const response = await fetch(config.apiUrl, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'Authorization': `Bearer ${config.apiKey}`,
+						},
+						body: JSON.stringify(requestBody),
+						signal: currentAbortController ? currentAbortController.signal : undefined,
+					});
+
+					if (!response.ok) {
+						throw new Error(`API调用失败: ${response.status} ${response.statusText}`);
+					}
+
+					const data = await response.json();
+					logApiCall('deepseek_api', requestBody, data);
+
+					return data.choices[0].message.content;
+				} catch (error) {
+					console.warn('API调用失败', error);
+					addSystemMessage('API调用失败: ' + error.message);
+					throw error; // 重新抛出错误，确保调用方知道发生了错误
+				}
+			}
+
+			// 添加消息到聊天容器
+			function addMessage(content, type) {
+				const chatContainer = document.getElementById('chatContainer');
+				const messageDiv = document.createElement('div');
+				messageDiv.className = `message ${type}`;
+
+				// 如果是助手消息且支持Markdown，则解析Markdown
+				if (type === 'assistant' && typeof marked !== 'undefined') {
+					messageDiv.innerHTML = marked.parse(content);
+					// 高亮代码块
+					if (typeof hljs !== 'undefined') {
+						messageDiv.querySelectorAll('pre code').forEach((block) => {
+							hljs.highlightElement(block);
+						});
+					}
+				} else {
+					messageDiv.textContent = content;
+				}
+
+				chatContainer.appendChild(messageDiv);
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+			}
+
+			function addUserMessage(content) {
+				addMessage(content, 'user');
+			}
+
+			function addAssistantMessage(content) {
+				addMessage(content, 'assistant');
+			}
+
+			function addSystemMessage(content) {
+				addMessage(content, 'system');
+			}
+
+			// 添加工具调用消息
+			function addToolCallMessage(toolName, params, result) {
+				const chatContainer = document.getElementById('chatContainer');
+				const messageDiv = document.createElement('div');
+				messageDiv.className = 'message tool-call';
+
+				const toolCallId = 'tool-' + Date.now();
+
+				messageDiv.innerHTML = `
+                <div class="tool-call-header">
+                    🔧 调用扩展 API : ${toolName}
+                </div>
+                <div class="tool-call-summary">
+                    ${result.pending ? '⏳ 执行中...' : result.success ? '✅ 调用成功' : '❌ 调用失败'} - 点击查看详情
+                </div>
+                <div class="tool-call-details" id="${toolCallId}">
+                    <strong>参数:</strong>
+                    <pre>${JSON.stringify(params, null, 2)}</pre>
+                    <strong>返回结果:</strong>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                </div>
+            `;
+
+				messageDiv.onclick = function () {
+					const details = document.getElementById(toolCallId);
+					details.classList.toggle('expanded');
+				};
+
+				chatContainer.appendChild(messageDiv);
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+			}
+
+			// 设置加载状态
+			function setLoading(loading) {
+				isLoading = loading;
+				const sendBtn = document.getElementById('sendBtn');
+				if (loading) {
+					sendBtn.innerHTML = '终止';
+					sendBtn.onclick = abortRequest;
+					sendBtn.disabled = false;
+					// 添加终止按钮样式类
+					sendBtn.classList.add('abort');
+				} else {
+					sendBtn.innerHTML = '发送';
+					sendBtn.onclick = sendMessage;
+					sendBtn.disabled = false;
+					// 移除终止按钮样式类
+					sendBtn.classList.remove('abort');
+				}
+			}
+
+			// 终止请求
+			function abortRequest() {
+				if (currentAbortController) {
+					currentAbortController.abort();
+					isAborted = true;
+					addSystemMessage('请求已被用户终止');
+					setLoading(false);
+				}
+			}
+
+			// 工具函数列表（用于自动补全）
+			const toolFunctions = [
+				{ name: 'getSelectedComponents', desc: '获取当前选中的元件信息' },
+				{ name: 'createComponent', desc: '创建新的元件' },
+				{ name: 'getDocumentInfo', desc: '获取当前文档信息' },
+				{ name: 'showMessage', desc: '显示消息提示' },
+				{ name: 'httpRequest', desc: '发送HTTP请求' },
+				{ name: 'showConfirmationDialog', desc: '显示确认对话框' },
+				{ name: 'showInformationDialog', desc: '显示信息对话框' },
+				{ name: 'showInputDialog', desc: '显示输入对话框' },
+				{ name: 'showSelectDialog', desc: '显示选择对话框' },
+				{ name: 'getEditorInfo', desc: '获取编辑器信息' },
+				{ name: 'getEnvironmentInfo', desc: '获取环境信息' },
+			];
+
+			let selectedSuggestionIndex = -1;
+
+			// 插入工具函数到输入框
+			function insertToolFunction() {
+				const dropdown = document.getElementById('toolDropdown');
+				const input = document.getElementById('messageInput');
+
+				if (dropdown.value) {
+					const currentValue = input.value;
+					const newValue = currentValue ? currentValue + ' ' + dropdown.value : dropdown.value;
+					input.value = newValue;
+					dropdown.value = ''; // 重置下拉框
+					input.focus();
+				}
+			}
+
+			// 处理自动补全
+			function handleAutoComplete(event) {
+				const input = event.target;
+				const value = input.value;
+				const suggestions = document.getElementById('autocompleteSuggestions');
+
+				// 获取当前光标位置的单词
+				const cursorPos = input.selectionStart;
+				const textBeforeCursor = value.substring(0, cursorPos);
+				const words = textBeforeCursor.split(/\s+/);
+				const currentWord = words[words.length - 1];
+
+				if (currentWord.length >= 2) {
+					const matches = toolFunctions.filter((func) => func.name.toLowerCase().includes(currentWord.toLowerCase()));
+
+					if (matches.length > 0) {
+						showSuggestions(matches);
+					} else {
+						hideSuggestions();
+					}
+				} else {
+					hideSuggestions();
+				}
+			}
+
+			// 显示建议列表
+			function showSuggestions(matches) {
+				const suggestions = document.getElementById('autocompleteSuggestions');
+				suggestions.innerHTML = matches
+					.map(
+						(func, index) => `
+                <div class="autocomplete-suggestion" data-index="${index}" onclick="selectSuggestion('${func.name}')">
+                    <div class="suggestion-name">${func.name}()</div>
+                    <div class="suggestion-desc">${func.desc}</div>
+                </div>
+            `,
+					)
+					.join('');
+				suggestions.style.display = 'block';
+				selectedSuggestionIndex = -1;
+			}
+
+			// 隐藏建议列表
+			function hideSuggestions() {
+				setTimeout(() => {
+					const suggestions = document.getElementById('autocompleteSuggestions');
+					suggestions.style.display = 'none';
+				}, 200);
+			}
+
+			// 显示自动补全（焦点时）
+			function showAutoComplete() {
+				const input = document.getElementById('messageInput');
+				if (input.value.length >= 2) {
+					handleAutoComplete({ target: input });
+				}
+			}
+
+			// 隐藏自动补全（失去焦点时）
+			function hideAutoComplete() {
+				hideSuggestions();
+			}
+
+			// 选择建议
+			function selectSuggestion(funcName) {
+				const input = document.getElementById('messageInput');
+				const value = input.value;
+				const cursorPos = input.selectionStart;
+				const textBeforeCursor = value.substring(0, cursorPos);
+				const textAfterCursor = value.substring(cursorPos);
+				const words = textBeforeCursor.split(/\s+/);
+
+				// 替换最后一个单词
+				words[words.length - 1] = funcName + '()';
+				const newTextBefore = words.join(' ');
+
+				input.value = newTextBefore + textAfterCursor;
+				input.focus();
+
+				// 设置光标位置
+				const newCursorPos = newTextBefore.length;
+				input.setSelectionRange(newCursorPos, newCursorPos);
+
+				hideSuggestions();
+			}
+
+			// 修改键盘事件处理，支持上下键选择建议
+			function handleKeyDown(event) {
+				const suggestions = document.getElementById('autocompleteSuggestions');
+				const isVisible = suggestions.style.display === 'block';
+
+				if (isVisible) {
+					const suggestionItems = suggestions.querySelectorAll('.autocomplete-suggestion');
+
+					if (event.key === 'ArrowDown') {
+						event.preventDefault();
+						selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestionItems.length - 1);
+						updateSelectedSuggestion(suggestionItems);
+					} else if (event.key === 'ArrowUp') {
+						event.preventDefault();
+						selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+						updateSelectedSuggestion(suggestionItems);
+					} else if (event.key === 'Enter' && selectedSuggestionIndex >= 0) {
+						event.preventDefault();
+						const selectedItem = suggestionItems[selectedSuggestionIndex];
+						const funcName = selectedItem.querySelector('.suggestion-name').textContent.replace('()', '');
+						selectSuggestion(funcName);
+						return;
+					} else if (event.key === 'Escape') {
+						hideSuggestions();
+						return;
+					}
+				}
+
+				if (event.key === 'Enter' && !event.shiftKey && !isVisible) {
+					event.preventDefault();
+					sendMessage();
+				}
+			}
+
+			// 更新选中的建议项样式
+			function updateSelectedSuggestion(suggestionItems) {
+				suggestionItems.forEach((item, index) => {
+					if (index === selectedSuggestionIndex) {
+						item.classList.add('selected');
+					} else {
+						item.classList.remove('selected');
+					}
+				});
+			}
+
+			// 记录API调用日志
+			function logApiCall(api, request, response) {
+				const timestamp = new Date().toLocaleString();
+				const logEntry = {
+					timestamp: timestamp,
+					api: api,
+					request: request,
+					response: response,
+				};
+
+				apiLogs.unshift(logEntry);
+				if (apiLogs.length > 50) {
+					apiLogs = apiLogs.slice(0, 50);
+				}
+
+				updateLogDisplay();
+			}
+
+			// 更新日志显示
+			function updateLogDisplay() {
+				const logContainer = document.getElementById('logContainer');
+
+				if (apiLogs.length === 0) {
+					logContainer.innerHTML = '<div class="log-entry"><div class="log-time">暂无API调用记录</div></div>';
+					return;
+				}
+
+				logContainer.innerHTML = apiLogs
+					.map(
+						(log) => `
+                <div class="log-entry">
+                    <div class="log-time">${log.timestamp}</div>
+                    <div class="log-content">${log.api}: ${log.response ? '成功' : '请求中'}</div>
+                </div>
+            `,
+					)
+					.join('');
+			}
+
+			// 清空日志
+			function clearLogs() {
+				apiLogs = [];
+				updateLogDisplay();
+				addSystemMessage('API调用日志已清空');
+			}
+		</script>
+	</body>
+</html>
