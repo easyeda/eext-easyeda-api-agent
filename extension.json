@@ -1,8 +1,8 @@
 {
 	"name": "easyeda-api-agent",
 	"uuid": "d6bdad7f18414e5383464fd2e41d49c2",
-	"displayName": "EDA Agent",
-	"description": "嘉立创EDA专业版 Agent 工具",
+	"displayName": "EDA API Agent",
+	"description": "嘉立创EDA专业版 API Agent 工具",
 	"version": "1.4.1",
 	"publisher": "JLCEDA <support[#]lceda.cn>",
 	"engines": {
@@ -18,8 +18,8 @@
 	"images": {
 		"logo": "./images/logo.png"
 	},
-	"homepage": "https://pro.lceda.cn",
-	"bugs": "https://lceda.cn/page/feedback?originPage=other",
+	"homepage": "https://github.com/easyeda/eext-easyeda-api-agent",
+	"bugs": "https://github.com/easyeda/eext-easyeda-api-agent/issues",
 	"activationEvents": {},
 	"entry": "./dist/index",
 	"dependentExtensions": {},
