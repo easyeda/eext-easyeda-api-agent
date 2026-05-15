@@ -4,6 +4,10 @@
 
 基于大模型的扩展API助手，专为嘉立创EDA专业版设计。通过自然语言或语音交互，用户可以便捷地调用EDA扩展API功能，无需记忆复杂的 API 调用方法。
 
+| 功能界面 | 设置 |
+| --- | --- |
+|  ![alt text](images/image1.png)  |  ![alt text](images/image.png)  |
+
 # 主要功能
 
 ## AI智能助手
