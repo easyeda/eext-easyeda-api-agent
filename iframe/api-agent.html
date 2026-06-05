@@ -707,22 +707,22 @@
 	</head>
 	<body>
 		<div class="header">
-			<h1>嘉立创EDA Agent</h1>
-			<button class="settings-btn" onclick="toggleSettings()">⚙️ 设置</button>
+			<h1 id="headerTitle"></h1>
+			<button class="settings-btn" onclick="toggleSettings()">⚙️ <span id="settingsBtnText"></span></button>
 		</div>
 
 		<div class="main-container">
 			<div class="chat-container" id="chatContainer">
-				<div class="message system">欢迎使用扩展API Agent！您可以通过自然语言或语音调用EDA扩展API功能。</div>
+				<div class="message system" id="welcomeMessage"></div>
 			</div>
 
 			<div class="input-area">
 				<div class="tool-selector">
 					<select class="tool-dropdown" id="toolDropdown" onchange="insertToolFunction()">
-						<option value="">选择快捷工具函数...</option>
-						<option value="getDocumentInfo()">获取文档信息 - getDocumentInfo()</option>
-						<option value="getEditorInfo()">获取编辑器信息 - getEditorInfo()</option>
-						<option value="getEnvironmentInfo()">获取环境信息 - getEnvironmentInfo()</option>
+						<option value=""></option>
+						<option value="getDocumentInfo()"></option>
+						<option value="getEditorInfo()"></option>
+						<option value="getEnvironmentInfo()"></option>
 					</select>
 				</div>
 
@@ -731,7 +731,7 @@
 						<textarea
 							class="message-input"
 							id="messageInput"
-							placeholder="请输入您的需求，例如：获取当前选中的元件信息，或直接输入工具函数名"
+							placeholder=""
 							onkeydown="handleKeyDown(event)"
 							oninput="handleAutoComplete(event)"
 							onfocus="showAutoComplete()"
@@ -739,8 +739,8 @@
 						></textarea>
 						<div class="autocomplete-suggestions" id="autocompleteSuggestions"></div>
 					</div>
-					<button class="send-btn" id="sendBtn">发送</button>
-					<button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecognition()">语音</button>
+					<button class="send-btn" id="sendBtn"></button>
+					<button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecognition()"></button>
 				</div>
 				<div class="voice-status" id="voiceStatus"></div>
 			</div>
@@ -749,22 +749,22 @@
 		<!-- 设置面板 -->
 		<div class="settings-panel" id="settingsPanel">
 			<div class="settings-header">
-				<h2>⚙️ 设置</h2>
+				<h2>⚙️ <span id="settingsHeaderText"></span></h2>
 				<button class="close-btn" onclick="toggleSettings()">&times;</button>
 			</div>
 
 			<div class="form-group">
-				<label for="apiUrl">API地址</label>
-				<input type="text" id="apiUrl" value="https://api.deepseek.com/chat/completions" placeholder="请输入API地址" />
+				<label for="apiUrl"></label>
+				<input type="text" id="apiUrl" value="https://api.deepseek.com/chat/completions" placeholder="" />
 			</div>
 
 			<div class="form-group">
-				<label for="apiKey">API密钥</label>
-				<input type="password" id="apiKey" placeholder="请输入DeepSeek API Key" />
+				<label for="apiKey"></label>
+				<input type="password" id="apiKey" placeholder="" />
 			</div>
 
 			<div class="form-group">
-				<label for="model">模型</label>
+				<label for="model"></label>
 				<select id="model">
 					<option value="deepseek-chat">deepseek-chat</option>
 					<option value="deepseek-coder">deepseek-coder</option>
@@ -772,37 +772,71 @@
 			</div>
 
 			<div class="form-group">
-				<label for="temperature">温度 (0-1)</label>
+				<label for="temperature"></label>
 				<input type="number" id="temperature" min="0" max="1" step="0.1" value="0.7" />
 			</div>
 
 			<div class="form-group">
-				<label for="voiceLanguage">语音识别语言</label>
+				<label for="voiceLanguage"></label>
 				<select id="voiceLanguage">
-					<option value="zh-CN">中文（简体）</option>
-					<option value="zh-TW">中文（繁体）</option>
+					<option value="zh-CN"></option>
+					<option value="zh-TW"></option>
 					<option value="en-US">English (US)</option>
 					<option value="ja-JP">日本語</option>
 				</select>
 			</div>
 
-			<button class="save-btn" onclick="saveSettings()">💾 保存设置</button>
+			<button class="save-btn" onclick="saveSettings()">💾 <span id="saveSettingsText"></span></button>
 
 			<!-- API日志部分 -->
 			<div class="log-section">
 				<div class="log-header">
-					<h3>📊 API调用日志</h3>
-					<button class="clear-log-btn" onclick="clearLogs()">🗑️ 清空</button>
+					<h3>📊 <span id="apiCallLogText"></span></h3>
+					<button class="clear-log-btn" onclick="clearLogs()">🗑️ <span id="clearLogsText"></span></button>
 				</div>
 				<div class="log-container" id="logContainer">
 					<div class="log-entry">
-						<div class="log-time">等待API调用...</div>
+						<div class="log-time" id="waitingForApiText"></div>
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<script>
+			// i18n support
+			var edaObj = (typeof eda !== 'undefined') ? eda : (window.parent && window.parent.eda);
+			function t(tag, ...args) {
+				if (edaObj && edaObj.sys_I18n) return edaObj.sys_I18n.text(tag, undefined, undefined, ...args);
+				return tag;
+			}
+
+			function initI18n() {
+				document.getElementById('headerTitle').textContent = t('headerTitle');
+				document.getElementById('settingsBtnText').textContent = t('settings');
+				document.getElementById('welcomeMessage').textContent = t('welcomeMessage');
+				document.getElementById('sendBtn').textContent = t('send');
+				document.getElementById('voiceBtn').textContent = t('voice');
+				document.getElementById('settingsHeaderText').textContent = t('settings');
+				document.querySelector('label[for="apiUrl"]').textContent = t('apiUrl');
+				document.getElementById('apiUrl').placeholder = t('apiUrlPlaceholder');
+				document.querySelector('label[for="apiKey"]').textContent = t('apiKey');
+				document.getElementById('apiKey').placeholder = t('apiKeyPlaceholder');
+				document.querySelector('label[for="model"]').textContent = t('model');
+				document.querySelector('label[for="temperature"]').textContent = t('temperature');
+				document.querySelector('label[for="voiceLanguage"]').textContent = t('voiceLanguage');
+				document.querySelector('#voiceLanguage option[value="zh-CN"]').textContent = t('chineseSimplified');
+				document.querySelector('#voiceLanguage option[value="zh-TW"]').textContent = t('chineseTraditional');
+				document.getElementById('saveSettingsText').textContent = t('saveSettings');
+				document.getElementById('apiCallLogText').textContent = t('apiCallLog');
+				document.getElementById('clearLogsText').textContent = t('clear');
+				document.getElementById('waitingForApiText').textContent = t('waitingForApi');
+				var dropdown = document.getElementById('toolDropdown');
+				dropdown.options[0].textContent = t('selectToolFunction');
+				dropdown.options[1].textContent = t('getDocInfoOption');
+				dropdown.options[2].textContent = t('getEditorInfoOption');
+				dropdown.options[3].textContent = t('getEnvInfoOption');
+			}
+
 			// 全局变量
 			let isLoading = false;
 			let isAborted = false;
@@ -861,8 +895,8 @@
 					} else {
 						return {
 							success: false,
-							error: `未知工具: ${name}`,
-							message: '工具不存在',
+							error: t('unknownTool', name),
+							message: t('toolDoesNotExist'),
 						};
 					}
 				}
@@ -880,8 +914,8 @@
 					} else {
 						return {
 							success: false,
-							error: `未知工具: ${name}`,
-							message: '工具不存在',
+							error: t('unknownTool', name),
+							message: t('toolDoesNotExist'),
 						};
 					}
 				}
@@ -899,9 +933,10 @@
 
 			// 页面加载完成后初始化
 			document.addEventListener('DOMContentLoaded', function () {
+				initI18n();
 				loadSettings();
 				initVoiceRecognition();
-				addSystemMessage('系统已就绪，可以开始对话或使用语音输入');
+				addSystemMessage(t('systemReady'));
 
 				// 初始化发送按钮事件
 				const sendBtn = document.getElementById('sendBtn');
@@ -921,7 +956,7 @@
 					recognition.onstart = function () {
 						isRecording = true;
 						updateVoiceButton();
-						updateVoiceStatus('正在监听...');
+						updateVoiceStatus(t('listening'));
 					};
 
 					recognition.onresult = function (event) {
@@ -933,9 +968,9 @@
 						document.getElementById('messageInput').value = transcript;
 
 						if (event.results[event.results.length - 1].isFinal) {
-							updateVoiceStatus('识别完成');
+							updateVoiceStatus(t('recognitionComplete'));
 						} else {
-							updateVoiceStatus('正在识别: ' + transcript);
+							updateVoiceStatus(t('voiceRecognizing', transcript));
 						}
 					};
 
@@ -948,19 +983,19 @@
 					recognition.onerror = function (event) {
 						isRecording = false;
 						updateVoiceButton();
-						updateVoiceStatus('语音识别错误: ' + event.error);
+						updateVoiceStatus(t('voiceRecognitionError', event.error));
 					};
 				} else {
-					console.warn('浏览器不支持语音识别');
+					console.warn(t('browserNoVoiceSupport'));
 					document.getElementById('voiceBtn').disabled = true;
-					updateVoiceStatus('浏览器不支持语音识别功能');
+					updateVoiceStatus(t('browserNoVoiceFeature'));
 				}
 			}
 
 			// 切换语音识别
 			function toggleVoiceRecognition() {
 				if (!recognition) {
-					addSystemMessage('语音识别功能不可用');
+					addSystemMessage(t('voiceNotAvailable'));
 					return;
 				}
 
@@ -976,10 +1011,10 @@
 			function updateVoiceButton() {
 				const voiceBtn = document.getElementById('voiceBtn');
 				if (isRecording) {
-					voiceBtn.innerHTML = '🛑 停止';
+					voiceBtn.innerHTML = '🛑 ' + t('stop');
 					voiceBtn.classList.add('recording');
 				} else {
-					voiceBtn.innerHTML = ' 语音 ';
+					voiceBtn.innerHTML = ' ' + t('voice') + ' ';
 					voiceBtn.classList.remove('recording');
 				}
 			}
@@ -988,7 +1023,7 @@
 			function updateVoiceStatus(status) {
 				const statusElement = document.getElementById('voiceStatus');
 				statusElement.textContent = status;
-				statusElement.className = 'voice-status' + (status.includes('监听') ? ' listening' : '');
+				statusElement.className = 'voice-status' + (status === t('listening') ? ' listening' : '');
 			}
 
 			// 切换设置面板
@@ -1012,7 +1047,7 @@
 					recognition.lang = config.voiceLanguage;
 				}
 
-				addSystemMessage('设置已保存');
+				addSystemMessage(t('settingsSaved'));
 				toggleSettings();
 			}
 
@@ -1033,14 +1068,14 @@
 
 			// 快速调用API
 			async function quickCall(toolName) {
-				addUserMessage(`调用 ${toolName}`);
+				addUserMessage(t('callingTool', toolName));
 
 				try {
 					const result = await mcpAdapter.executeTool(toolName);
 					addToolCallMessage(toolName, {}, result);
 					logApiCall(toolName, {}, result);
 				} catch (error) {
-					addAssistantMessage(`调用失败: ${error.message}`);
+					addAssistantMessage(t('callFailedWithMessage', error.message));
 					logApiCall(toolName, {}, { success: false, error: error.message });
 				}
 			}
@@ -1053,7 +1088,7 @@
 				if (!message || isLoading) return;
 
 				if (!config.apiKey) {
-					addSystemMessage('请先在设置中配置API密钥');
+					addSystemMessage(t('configureApiKey'));
 					return;
 				}
 
@@ -1073,7 +1108,7 @@
 
 					// 确保response不为undefined
 					if (!response) {
-						throw new Error('API返回了空响应');
+						throw new Error(t('apiReturnedEmpty'));
 					}
 
 					// 检查是否包含工具调用（支持多个工具调用）
@@ -1110,8 +1145,8 @@
 							}
 						}
 					} catch (e) {
-						console.error('解析工具调用失败:', e);
-						addSystemMessage(`解析工具调用失败: ${e.message}`);
+						console.error(t('parseToolCallFailed', e.message), e);
+						addSystemMessage(t('parseToolCallFailed', e.message));
 					}
 
 					if (toolCalls.length > 0) {
@@ -1136,14 +1171,14 @@
 									const lastToolMessage = toolMessages[toolMessages.length - 1];
 									if (lastToolMessage) {
 										lastToolMessage.querySelector('.tool-call-summary').textContent = toolResult.success
-											? '✅ 调用成功 - 点击查看详情'
-											: '❌ 调用失败 - 点击查看详情';
+											? '✅ ' + t('callSuccessClickDetails')
+											: '❌ ' + t('callFailedClickDetails');
 
 										const details = lastToolMessage.querySelector('.tool-call-details');
 										details.innerHTML = `
-                                        <strong>参数:</strong>
+                                        <strong>${t('parameters')}</strong>
                                         <pre>${JSON.stringify(toolCall.params || {}, null, 2)}</pre>
-                                        <strong>返回结果:</strong>
+                                        <strong>${t('returnResult')}</strong>
                                         <pre>${JSON.stringify(toolResult, null, 2)}</pre>
                                     `;
 									}
@@ -1152,7 +1187,7 @@
 								} catch (error) {
 									const errorResult = { success: false, error: error.message };
 									toolResults.push({ toolCall, toolResult: errorResult });
-									addSystemMessage(`工具调用失败: ${error.message}`);
+									addSystemMessage(t('toolCallFailedWithMessage', error.message));
 									logApiCall(toolCall.name, toolCall.params, errorResult);
 								}
 							}
@@ -1161,7 +1196,7 @@
 						// 基于所有工具调用结果生成最终回复
 						if (toolResults.length > 0) {
 							const resultsText = toolResults
-								.map(({ toolCall, toolResult }) => `工具 ${toolCall.name}: ${JSON.stringify(toolResult)}`)
+								.map(({ toolCall, toolResult }) => `${t('toolResultEntry', toolCall.name)}: ${JSON.stringify(toolResult)}`)
 								.join('\n');
 
 							// 检查是否被终止
@@ -1169,7 +1204,7 @@
 								return;
 							}
 
-							const finalResponse = await callDeepSeekAPI(`基于工具调用结果，请用自然语言回复用户。工具调用结果:\n${resultsText}`);
+							const finalResponse = await callDeepSeekAPI(t('toolResultsPrompt', resultsText));
 
 							// 再次检查是否被终止
 							if (isAborted) {
@@ -1195,7 +1230,7 @@
 						// 请求被终止，不显示错误信息
 						return;
 					} else {
-						addSystemMessage(`API调用失败: ${error.message}`);
+						addSystemMessage(t('apiCallFailedWithMessage', error.message));
 					}
 				} finally {
 					currentAbortController = null;
@@ -1205,28 +1240,11 @@
 
 			// 调用DeepSeek API
 			async function callDeepSeekAPI(message) {
-				const systemPrompt = `你是嘉立创EDA专业版的AI助手，专门帮助用户使用EDA扩展API。
-
-可用工具:
-${mcpAdapter
-	.getAvailableTools()
-	.map((tool) => `- ${tool.name}: ${tool.description}`)
-	.join('\n')}
-
-当用户需要调用工具时，请使用以下格式:
-TOOL_CALL: {"name": "工具名称", "params": {参数对象}}
-
-如果需要同时调用多个工具，可以使用多个TOOL_CALL标记，例如:
-TOOL_CALL: {"name": "工具1", "params": {参数对象1}}
-这里是一些文本...
-TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
-
-重要规则:
-1. 只有在用户明确需要调用EDA功能时才使用工具
-2. 不要编造或假设工具调用的结果
-3. 如果不确定用户意图，请先询问澄清
-4. 回答要简洁明了，避免冗长的解释
-5. 支持Markdown格式回复`;
+				const toolsList = mcpAdapter
+					.getAvailableTools()
+					.map((tool) => `- ${tool.name}: ${tool.description}`)
+					.join('\n');
+				const systemPrompt = t('systemPrompt', toolsList);
 
 				const messages = [{ role: 'system', content: systemPrompt }, ...conversationHistory.slice(-10), { role: 'user', content: message }];
 
@@ -1242,7 +1260,7 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 				try {
 					// 检查是否被终止
 					if (isAborted) {
-						throw new Error('请求已被终止');
+						throw new Error(t('requestAborted'));
 					}
 
 					// 使用fetch()以支持AbortController
@@ -1257,7 +1275,7 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 					});
 
 					if (!response.ok) {
-						throw new Error(`API调用失败: ${response.status} ${response.statusText}`);
+						throw new Error(t('apiCallFailedWithStatus', response.status, response.statusText));
 					}
 
 					const data = await response.json();
@@ -1265,8 +1283,8 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 
 					return data.choices[0].message.content;
 				} catch (error) {
-					console.warn('API调用失败', error);
-					addSystemMessage('API调用失败: ' + error.message);
+					console.warn(t('apiCallFailedWithMessage', error.message), error);
+					addSystemMessage(t('apiCallFailedWithMessage', error.message));
 					throw error; // 重新抛出错误，确保调用方知道发生了错误
 				}
 			}
@@ -1316,15 +1334,15 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 
 				messageDiv.innerHTML = `
                 <div class="tool-call-header">
-                    🔧 调用扩展 API : ${toolName}
+                    🔧 ${t('callingExtensionApi', toolName)}
                 </div>
                 <div class="tool-call-summary">
-                    ${result.pending ? '⏳ 执行中...' : result.success ? '✅ 调用成功' : '❌ 调用失败'} - 点击查看详情
+                    ${result.pending ? '⏳ ' + t('executing') : result.success ? '✅ ' + t('callSuccessClickDetails') : '❌ ' + t('callFailedClickDetails')}
                 </div>
                 <div class="tool-call-details" id="${toolCallId}">
-                    <strong>参数:</strong>
+                    <strong>${t('parameters')}</strong>
                     <pre>${JSON.stringify(params, null, 2)}</pre>
-                    <strong>返回结果:</strong>
+                    <strong>${t('returnResult')}</strong>
                     <pre>${JSON.stringify(result, null, 2)}</pre>
                 </div>
             `;
@@ -1343,13 +1361,13 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 				isLoading = loading;
 				const sendBtn = document.getElementById('sendBtn');
 				if (loading) {
-					sendBtn.innerHTML = '终止';
+					sendBtn.innerHTML = t('abort');
 					sendBtn.onclick = abortRequest;
 					sendBtn.disabled = false;
 					// 添加终止按钮样式类
 					sendBtn.classList.add('abort');
 				} else {
-					sendBtn.innerHTML = '发送';
+					sendBtn.innerHTML = t('send');
 					sendBtn.onclick = sendMessage;
 					sendBtn.disabled = false;
 					// 移除终止按钮样式类
@@ -1362,24 +1380,24 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 				if (currentAbortController) {
 					currentAbortController.abort();
 					isAborted = true;
-					addSystemMessage('请求已被用户终止');
+					addSystemMessage(t('requestAbortedByUser'));
 					setLoading(false);
 				}
 			}
 
 			// 工具函数列表（用于自动补全）
 			const toolFunctions = [
-				{ name: 'getSelectedComponents', desc: '获取当前选中的元件信息' },
-				{ name: 'createComponent', desc: '创建新的元件' },
-				{ name: 'getDocumentInfo', desc: '获取当前文档信息' },
-				{ name: 'showMessage', desc: '显示消息提示' },
-				{ name: 'httpRequest', desc: '发送HTTP请求' },
-				{ name: 'showConfirmationDialog', desc: '显示确认对话框' },
-				{ name: 'showInformationDialog', desc: '显示信息对话框' },
-				{ name: 'showInputDialog', desc: '显示输入对话框' },
-				{ name: 'showSelectDialog', desc: '显示选择对话框' },
-				{ name: 'getEditorInfo', desc: '获取编辑器信息' },
-				{ name: 'getEnvironmentInfo', desc: '获取环境信息' },
+				{ name: 'getSelectedComponents', desc: t('toolDescGetSelectedComponents') },
+				{ name: 'createComponent', desc: t('toolDescCreateComponent') },
+				{ name: 'getDocumentInfo', desc: t('toolDescGetDocumentInfo') },
+				{ name: 'showMessage', desc: t('toolDescShowMessage') },
+				{ name: 'httpRequest', desc: t('toolDescHttpRequest') },
+				{ name: 'showConfirmationDialog', desc: t('toolDescShowConfirmationDialog') },
+				{ name: 'showInformationDialog', desc: t('toolDescShowInformationDialog') },
+				{ name: 'showInputDialog', desc: t('toolDescShowInputDialog') },
+				{ name: 'showSelectDialog', desc: t('toolDescShowSelectDialog') },
+				{ name: 'getEditorInfo', desc: t('toolDescGetEditorInfo') },
+				{ name: 'getEnvironmentInfo', desc: t('toolDescGetEnvironmentInfo') },
 			];
 
 			let selectedSuggestionIndex = -1;
@@ -1552,7 +1570,7 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 				const logContainer = document.getElementById('logContainer');
 
 				if (apiLogs.length === 0) {
-					logContainer.innerHTML = '<div class="log-entry"><div class="log-time">暂无API调用记录</div></div>';
+					logContainer.innerHTML = '<div class="log-entry"><div class="log-time">' + t('noApiRecords') + '</div></div>';
 					return;
 				}
 
@@ -1561,7 +1579,7 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 						(log) => `
                 <div class="log-entry">
                     <div class="log-time">${log.timestamp}</div>
-                    <div class="log-content">${log.api}: ${log.response ? '成功' : '请求中'}</div>
+                    <div class="log-content">${log.api}: ${log.response ? t('success') : t('requesting')}</div>
                 </div>
             `,
 					)
@@ -1572,7 +1590,7 @@ TOOL_CALL: {"name": "工具2", "params": {参数对象2}}
 			function clearLogs() {
 				apiLogs = [];
 				updateLogDisplay();
-				addSystemMessage('API调用日志已清空');
+				addSystemMessage(t('apiLogCleared'));
 			}
 		</script>
 	</body>

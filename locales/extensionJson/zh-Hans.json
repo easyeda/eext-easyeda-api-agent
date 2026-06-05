@@ -1,3 +1,7 @@
 {
-	"About...": "关于..."
+	"displayName": "EDA API Agent",
+	"description": "嘉立创EDA专业版 API Agent 工具",
+	"SDK": "SDK",
+	"AI": "AI",
+	"API Agent": "API Agent"
 }

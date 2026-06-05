@@ -1,3 +1,7 @@
 {
-	"About...": "About..."
+	"displayName": "EDA API Agent",
+	"description": "EasyEDA Pro API Agent Tool",
+	"SDK": "SDK",
+	"AI": "AI",
+	"API Agent": "API Agent"
 }
