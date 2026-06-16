@@ -10,7 +10,7 @@ class SystemAdapter extends BaseAdapter {
 
 	initTools() {
 		// 原有工具
-		this.registerTool('showMessage', '显示消息提示', (params) => this.showMessage(params));
+		this.registerTool('showMessage', t('toolDescShowMessage'), (params) => this.showMessage(params));
 
 		this.registerTool('showDialog', '显示对话框', (params) => this.showDialog(params));
 
